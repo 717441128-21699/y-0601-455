@@ -32,14 +32,19 @@ router.post('/:id/buy', authMiddleware, async (req: AuthRequest, res: Response) 
     const result = await TradeService.buyItem(req.playerId!, req.params.id);
     if (result.success && result.trade) {
       const io = getSocketServer.get();
-      const buyer = await Player.findById(req.playerId).select('nickname');
-      if (io && buyer) {
+      const [buyer, seller] = await Promise.all([
+        Player.findById(req.playerId).select('nickname'),
+        Player.findById(result.trade.sellerId).select('nickname'),
+      ]);
+      if (io && buyer && seller) {
         io.emit('trade_completed', {
           tradeId: result.trade._id,
           itemType: result.trade.itemType,
           buyer: buyer.nickname,
+          seller: seller.nickname,
           price: result.trade.askingPrice,
           quantity: result.trade.quantity,
+          totalValue: result.trade.askingPrice * result.trade.quantity,
           festivalTriggered: result.festivalTriggered,
           timestamp: new Date(),
         });

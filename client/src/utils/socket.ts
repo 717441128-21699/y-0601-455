@@ -46,9 +46,20 @@ export const initSocket = (): Socket => {
   })
 
   socketInstance.on('trade_completed', (data: any) => {
-    message.info(
-      `【全服公告】玩家 ${data.buyer} 购买了 ${data.seller} 的${data.itemType === 'candy' ? '糖果' : '配方'}，价值 ${data.price.toLocaleString()} 金币！`
-    )
+    const qty = data.quantity || 1
+    const unitPrice = data.price || 0
+    const total = data.totalValue || unitPrice * qty
+    const itemName = data.itemType === 'candy' ? '糖果' : '配方图纸'
+    const sellerName = data.seller || '神秘卖家'
+    if (qty > 1) {
+      message.info(
+        `【全服公告】玩家 ${data.buyer} 购买了 ${sellerName} 的 ${itemName} ×${qty}，单价 ${unitPrice.toLocaleString()} 💰，总价 ${total.toLocaleString()} 金币！${data.festivalTriggered ? '🎉 触发糖果节！' : ''}`
+      )
+    } else {
+      message.info(
+        `【全服公告】玩家 ${data.buyer} 购买了 ${sellerName} 的 ${itemName}，价值 ${total.toLocaleString()} 金币！${data.festivalTriggered ? '🎉 触发糖果节！' : ''}`
+      )
+    }
   })
 
   socketInstance.on('contest_started', (data: any) => {

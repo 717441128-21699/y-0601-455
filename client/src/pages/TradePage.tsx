@@ -35,42 +35,52 @@ const TradePage = () => {
   const [total, setTotal] = useState(0)
 
   useEffect(() => {
-    loadTabData()
+    loadMarketData()
+    loadMyTradesData()
   }, [tab, page, itemFilter, qualityFilter, sortBy])
 
   useEffect(() => {
     const socket = getSocket()
     if (socket) {
       socket.on('trade_completed', () => {
-        setTimeout(loadTabData, 1000)
+        setTimeout(() => {
+          loadMarketData()
+          loadMyTradesData()
+        }, 1000)
       })
     }
   }, [])
 
-  const loadTabData = async () => {
+  const loadMarketData = async () => {
     try {
-      if (tab === 'market') {
-        const res: any = await request.get(
-          `/trade/marketplace?page=${page}&limit=12&sortBy=${sortBy}${itemFilter ? `&itemType=${itemFilter}` : ''}${qualityFilter ? `&quality=${qualityFilter}` : ''}`
-        )
-        setListings(res.trades || [])
-        setTotal(res.total || 0)
-      }
-      if (tab === 'sell') {
-        const [s, p, c, r, inv] = await Promise.all([
-          request.get('/trade/my/seller?limit=20').catch(() => ({ trades: [] })),
-          request.get('/trade/my/buyer?limit=20').catch(() => ({ trades: [] })),
-          request.get('/candy/candies/my?limit=100').catch(() => ({ candies: [] })),
-          request.get('/candy/recipes/approved?limit=50').catch(() => ({ recipes: [] })),
-          request.get('/candy/materials').catch(() => ({ specialItems: [] })),
-        ])
-        setMySales((s as any).trades || [])
-        setMyPurchases((p as any).trades || [])
-        setMyCandies(((c as any).candies || []).filter((x: any) => !x.inTrade))
-        setMyRecipes((r as any).recipes || [])
-        setInventory(inv as any)
-      }
+      const res: any = await request.get(
+        `/trade/marketplace?page=${page}&limit=12&sortBy=${sortBy}${itemFilter ? `&itemType=${itemFilter}` : ''}${qualityFilter ? `&quality=${qualityFilter}` : ''}`
+      )
+      setListings(res.trades || [])
+      setTotal(res.total || 0)
     } catch (e) {}
+  }
+
+  const loadMyTradesData = async () => {
+    try {
+      const [s, p, c, r, inv] = await Promise.all([
+        request.get('/trade/my/seller?limit=20').catch(() => ({ trades: [] })),
+        request.get('/trade/my/buyer?limit=20').catch(() => ({ trades: [] })),
+        request.get('/candy/candies/my?limit=100').catch(() => ({ candies: [] })),
+        request.get('/candy/recipes/approved?limit=50').catch(() => ({ recipes: [] })),
+        request.get('/candy/materials').catch(() => ({ specialItems: [] })),
+      ])
+      setMySales((s as any).trades || [])
+      setMyPurchases((p as any).trades || [])
+      setMyCandies(((c as any).candies || []).filter((x: any) => !x.inTrade))
+      setMyRecipes((r as any).recipes || [])
+      setInventory(inv as any)
+    } catch (e) {}
+  }
+
+  const loadTabData = async () => {
+    loadMarketData()
+    loadMyTradesData()
   }
 
   const getBlueprintQty = (recipeId: string) => {
