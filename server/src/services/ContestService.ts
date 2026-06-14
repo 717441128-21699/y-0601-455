@@ -5,6 +5,7 @@ import { Player } from '../models/Player';
 import { PlayerHistory } from '../models/PlayerHistory';
 import { GlobalState } from '../models/GlobalState';
 import { Recipe } from '../models/Recipe';
+import { Inventory } from '../models/Inventory';
 
 export interface SkillBoostResult {
   success: boolean;
@@ -90,6 +91,10 @@ export class ContestService {
     if (!contest) return { success: false, message: '比赛不存在' };
 
     const now = new Date();
+    if (contest.status === 'scheduled' && now >= contest.startTime) {
+      contest.status = 'ongoing';
+      await contest.save();
+    }
     if (now < contest.startTime) return { success: false, message: '比赛尚未开始' };
     if (now > contest.submissionDeadline) return { success: false, message: '报名已截止' };
     if (contest.participants.length >= contest.maxParticipants) {
@@ -278,6 +283,57 @@ export class ContestService {
           player.exp += 1000;
         }
         await player.save();
+
+        const rewardEntry = p.rank === 1 ? (reloaded.rewards.ranks as any)['1'] :
+                            p.rank === 2 ? (reloaded.rewards.ranks as any)['2'] :
+                            p.rank === 3 ? (reloaded.rewards.ranks as any)['3'] :
+                            p.rank! <= 10 ? (reloaded.rewards.ranks as any)['4-10'] :
+                            (reloaded.rewards.ranks as any)['11-30'];
+
+        if (rewardEntry?.recipeBlueprint) {
+          const blueprintRecipe = new Recipe({
+            creatorId: p.playerId,
+            name: rewardEntry.recipeBlueprint,
+            description: `${reloaded.theme}大赛冠军限定配方`,
+            ingredients: [
+              { materialId: new Types.ObjectId(), materialName: '星霜蜜糖', minQuantity: 3, maxQuantity: 5, order: 0 },
+              { materialId: new Types.ObjectId(), materialName: '月华花果', minQuantity: 2, maxQuantity: 4, order: 1 },
+              { materialId: new Types.ObjectId(), materialName: '魔力结晶', minQuantity: 1, maxQuantity: 3, order: 2 },
+            ],
+            baseSweetness: 120,
+            baseMagicDuration: 90,
+            targetQuality: 'epic',
+            possibleEffects: ['sparkle', 'flying_kiss'],
+            difficulty: 7,
+            successRate: 0.65,
+            paperCost: 2,
+            dewCost: 1,
+            isOfficial: true,
+            status: 'approved',
+            submittedAt: new Date(),
+            limitedEdition: true,
+            season: reloaded.theme,
+          });
+          await blueprintRecipe.save();
+
+          p.reward.recipeId = blueprintRecipe._id;
+
+          const inventory = await Inventory.findOne({ playerId: p.playerId });
+          if (inventory) {
+            const existingBlueprint = inventory.specialItems.find(i => i.itemId === `blueprint_${blueprintRecipe._id}`);
+            if (!existingBlueprint) {
+              inventory.specialItems.push({
+                itemId: `blueprint_${blueprintRecipe._id}`,
+                name: `限定图纸: ${rewardEntry.recipeBlueprint}`,
+                description: `${reloaded.theme}大赛第${p.rank}名限定甜点图纸`,
+                icon: '📜',
+                type: 'blueprint',
+                quantity: 1,
+              });
+              await inventory.save();
+            }
+          }
+        }
 
         await PlayerHistory.findOneAndUpdate(
           { playerId: p.playerId },

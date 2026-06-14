@@ -141,7 +141,7 @@ const InventoryPage = () => {
                       {specials.map((s: any) => (
                         <Col xs={24} sm={12} md={8} lg={6} key={s.itemId}>
                           <Card className="candy-card" hoverable bodyStyle={{ padding: 12 }}
-                            style={{ borderLeft: '4px solid #722ed1' }}
+                            style={{ borderLeft: `4px solid ${s.type === 'blueprint' ? '#722ed1' : '#faad14'}` }}
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                               <Avatar size={44} style={{ fontSize: 26 }}>{s.icon}</Avatar>
@@ -152,8 +152,11 @@ const InventoryPage = () => {
                                 </Tooltip>
                               </div>
                             </div>
-                            <div style={{ textAlign: 'right', marginTop: 6 }}>
-                              <Tag color="purple" style={{ fontSize: 14 }}>x{s.quantity}</Tag>
+                            <div style={{ textAlign: 'right', marginTop: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <Tag color={s.type === 'blueprint' ? 'purple' : 'gold'} style={{ fontSize: 11 }}>
+                                {s.type === 'blueprint' ? '图纸' : s.type === 'sugar_paper' ? '试糖纸' : s.type === 'rare_dew' ? '蜜露' : '消耗品'}
+                              </Tag>
+                              <Tag color={s.type === 'blueprint' ? 'purple' : 'magenta'} style={{ fontSize: 14 }}>x{s.quantity}</Tag>
                             </div>
                           </Card>
                         </Col>

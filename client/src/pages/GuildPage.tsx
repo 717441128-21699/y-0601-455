@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import {
   Row, Col, Card, Button, Avatar, List, Tag, Statistic, Modal, Form, Input,
-  InputNumber, Typography, Space, Empty, Progress, Divider, Drawer, Table, Select, message
+  InputNumber, Typography, Space, Empty, Progress, Divider, Drawer, Table, Select, message, Alert
 } from 'antd'
 import {
   TeamOutlined, PlusOutlined, UpOutlined, BankOutlined, GoldOutlined,
-  GiftOutlined, SaveOutlined, HomeOutlined, FlowerOutlined, CrownOutlined,
+  GiftOutlined, SaveOutlined, HomeOutlined, ExperimentOutlined, CrownOutlined,
   LogoutOutlined, ArrowUpOutlined
 } from '@ant-design/icons'
 import { useAppStore } from '../store/useAppStore'
@@ -13,7 +13,7 @@ import request from '../utils/request'
 import { STYLE_BG } from '../utils/constants'
 import dayjs from 'dayjs'
 
-const { Title, Text } = Typography
+const { Title, Text, Paragraph } = Typography
 const { Option } = Select
 
 const GuildPage = () => {
@@ -243,7 +243,7 @@ const GuildPage = () => {
                   <Button type="primary" block icon={<SaveOutlined />} size="large" onClick={openDonate}>捐献</Button>
                 </Col>
                 <Col xs={24} md={6}>
-                  <Button block icon={<FlowerOutlined />} size="large" onClick={collectFarm}>
+                  <Button block icon={<ExperimentOutlined />} size="large" onClick={collectFarm}>
                     收获农场
                   </Button>
                 </Col>
@@ -256,7 +256,7 @@ const GuildPage = () => {
                       </Button>
                     </Col>
                     <Col xs={24} md={6}>
-                      <Button block icon={<FlowerOutlined />} size="large" onClick={() => upgrade('farm')}>
+                      <Button block icon={<ExperimentOutlined />} size="large" onClick={() => upgrade('farm')}>
                         蜜糖农场 Lv.{guild.honeyFarmLevel}
                       </Button>
                     </Col>
@@ -399,7 +399,7 @@ const GuildPage = () => {
               min={0}
               max={user?.gold || 0}
               value={donateGold}
-              onChange={setDonateGold}
+              onChange={(v) => setDonateGold(v || 0)}
               size="large"
               style={{ width: '80%' }}
               addonAfter={`/ ${user?.gold?.toLocaleString() || 0}`}

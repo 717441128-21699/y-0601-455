@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios'
+import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import { message } from 'antd'
 
 const request: AxiosInstance = axios.create({
@@ -7,7 +7,7 @@ const request: AxiosInstance = axios.create({
 })
 
 request.interceptors.request.use(
-  (config: AxiosRequestConfig) => {
+  (config: InternalAxiosRequestConfig) => {
     const token = localStorage.getItem('candy_token')
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`
@@ -18,7 +18,12 @@ request.interceptors.request.use(
 )
 
 request.interceptors.response.use(
-  (response: AxiosResponse) => response.data,
+  (response: AxiosResponse) => {
+    if (response.config.responseType === 'blob') {
+      return response
+    }
+    return response.data as any
+  },
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('candy_token')

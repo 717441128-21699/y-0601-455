@@ -25,7 +25,14 @@ const ReportPage = () => {
     setLoading(true)
     try {
       const res: any = await request.get('/report/latest')
-      setReport(res)
+      if (res) {
+        setReport(res)
+      } else {
+        const genRes: any = await request.post('/report/generate')
+        if (genRes?.success) {
+          setReport(genRes.report)
+        }
+      }
     } finally { setLoading(false) }
   }
 
@@ -33,7 +40,7 @@ const ReportPage = () => {
     setGenerating(true)
     try {
       const res: any = await request.post('/report/generate')
-      if (res.success) {
+      if (res?.success) {
         message.success('报告生成成功！')
         setReport(res.report)
       }
@@ -44,16 +51,21 @@ const ReportPage = () => {
     if (!report) return
     setDownloading(true)
     try {
-      const blob: any = await request.get(`/report/pdf/${report._id}`, {
+      const response: any = await request.get(`/report/pdf/${report._id}`, {
         responseType: 'blob',
       } as any)
+      const blob = response.data || response
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
       a.download = `candy-report-${dayjs(report.weekStart).format('YYYYMMDD')}.pdf`
+      document.body.appendChild(a)
       a.click()
+      document.body.removeChild(a)
       URL.revokeObjectURL(url)
       message.success('PDF 下载成功')
+    } catch (e) {
+      message.error('PDF 下载失败')
     } finally { setDownloading(false) }
   }
 
@@ -123,7 +135,7 @@ const ReportPage = () => {
       tooltip: { trigger: 'axis' },
       legend: { data: legend, top: 0 },
       grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-      xAxis: { type: 'category', boundaryGap: false, data: allDates.map(d => d.slice(5)) },
+      xAxis: { type: 'category', boundaryGap: false, data: allDates.map((d) => (d as string).slice(5)) },
       yAxis: { type: 'value', name: '金币' },
       series,
       color: ['#FF69B4', '#722ed1', '#1890ff', '#52c41a', '#FA8C16'],
@@ -346,7 +358,7 @@ const ReportPage = () => {
                           <Table
                             size="small"
                             dataSource={report.topCandies || []}
-                            rowKey={(r, i) => i?.toString()}
+                            rowKey={(_, i) => (i ?? 0).toString()}
                             pagination={false}
                             columns={[
                               { title: '排名', width: 60, render: (_: any, __: any, i: number) => <b>#{i + 1}</b> },

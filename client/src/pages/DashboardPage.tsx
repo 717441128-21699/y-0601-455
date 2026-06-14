@@ -38,9 +38,9 @@ const DashboardPage = () => {
         request.get('/report/leaderboard/collection?limit=5').catch(() => ({ entries: [] })),
         request.get('/report/my/history').catch(() => null),
       ])
-      setContest(active.active || active.upcoming)
-      setRecentCandies(candies.candies || [])
-      setLeaderboard(lb.entries || [])
+      setContest((active as any).active || (active as any).upcoming)
+      setRecentCandies((candies as any).candies || [])
+      setLeaderboard((lb as any).entries || [])
       setHistory(his)
     } catch (e) {}
   }

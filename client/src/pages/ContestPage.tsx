@@ -13,7 +13,7 @@ import { getSocket } from '../utils/socket'
 import { QUALITY_NAMES, QUALITY_COLORS, EFFECT_NAMES, AFFIX_NAMES } from '../utils/constants'
 import dayjs from 'dayjs'
 
-const { Title, Text } = Typography
+const { Title, Text, Paragraph } = Typography
 const { Option } = Select
 
 const ContestPage = () => {
@@ -25,28 +25,49 @@ const ContestPage = () => {
   const [liveData, setLiveData] = useState<any>({ participants: [], events: [], scoreHistory: [] })
   const [refreshLoading, setRefreshLoading] = useState(false)
   const contestRef = useRef<any>(null)
+  const socketJoinedRef = useRef<string | null>(null)
 
   useEffect(() => {
     loadContest()
     const socket = getSocket()
-    if (socket && activeContest) {
-      socket.emit('join_contest', activeContest._id)
+    if (socket) {
       socket.on('contest_updated', (data: any) => {
-        setLiveData(prev => ({ ...prev, ...data }))
+        setLiveData((prev: any) => ({ ...prev, ...data }))
       })
       socket.on('skill_result', (res: any) => {
         if (res.success) message.success(res.message)
         else message.warning(res.message)
       })
+      socket.on('contest_ended', () => {
+        loadContest()
+      })
     }
     return () => {
-      if (socket && activeContest) socket.emit('leave_contest', activeContest._id)
+      if (socket) {
+        socket.off('contest_updated')
+        socket.off('skill_result')
+        socket.off('contest_ended')
+        if (socketJoinedRef.current) {
+          socket.emit('leave_contest', socketJoinedRef.current)
+          socketJoinedRef.current = null
+        }
+      }
     }
   }, [])
 
   useEffect(() => {
     contestRef.current = activeContest
-    if (activeContest) loadFullContest()
+    if (activeContest?._id) {
+      loadFullContest()
+      const socket = getSocket()
+      if (socket && socketJoinedRef.current !== activeContest._id) {
+        if (socketJoinedRef.current) {
+          socket.emit('leave_contest', socketJoinedRef.current)
+        }
+        socket.emit('join_contest', activeContest._id)
+        socketJoinedRef.current = activeContest._id
+      }
+    }
   }, [activeContest?._id])
 
   const loadContest = async () => {
@@ -61,7 +82,7 @@ const ContestPage = () => {
   const loadFullContest = async () => {
     try {
       const c: any = await request.get(`/contest/${activeContest._id}`)
-      setLiveData(prev => ({
+      setLiveData((prev: any) => ({
         participants: c.participants || prev.participants,
         events: c.events || prev.events,
         scoreHistory: c.scoreHistory || prev.scoreHistory,
@@ -88,7 +109,7 @@ const ContestPage = () => {
         message.success(res.message)
         setSubmitModal(false)
         setSelectedCandy(null)
-        loadFullContest()
+        await loadFullContest()
         fetchUserInfo()
       } else {
         message.warning(res.message)

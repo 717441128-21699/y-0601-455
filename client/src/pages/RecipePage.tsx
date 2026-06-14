@@ -97,19 +97,29 @@ const RecipePage = () => {
         fetchUserInfo()
         loadData()
       } else {
-        message.warning(res.message)
         if (res.returnedMaterials?.length) {
           Modal.info({
             title: '研发失败',
             content: (
               <div>
                 <p>{res.message}</p>
-                <div>返还原料：{res.returnedMaterials.map((m: any) => `${m.name} x${m.quantity}`).join('、')}</div>
-                <div>本次成功率：{(res.actualSuccessRate * 100).toFixed(1)}%</div>
+                <div style={{ marginTop: 8 }}>
+                  <b>返还原料：</b>
+                  <div style={{ marginTop: 4 }}>
+                    {res.returnedMaterials.map((m: any, i: number) => (
+                      <Tag key={i} color="blue">{m.name} x{m.quantity}</Tag>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ marginTop: 8, color: '#888' }}>本次成功率：{(res.actualSuccessRate * 100).toFixed(1)}%</div>
               </div>
             ),
           })
+        } else {
+          message.warning(res.message)
         }
+        fetchUserInfo()
+        loadData()
       }
     } finally { setLoading(false) }
   }
@@ -139,7 +149,13 @@ const RecipePage = () => {
   const nextRank = ['novice', 'apprentice', 'journeyman', 'expert', 'master'][Math.min(currentRankIdx + 1, 4)]
 
   const columns = [
-    { title: '配方名称', dataIndex: 'name', key: 'name' },
+    { title: '配方名称', dataIndex: 'name', key: 'name', render: (n: string, r: any) => (
+      <Space>
+        <span>{n}</span>
+        {r.limitedEdition && <Tag color="gold">限定</Tag>}
+        {(r.creatorId?._id || r.creatorId) !== user?.id && <Tag color="purple">图纸</Tag>}
+      </Space>
+    )},
     {
       title: '目标品质', dataIndex: 'targetQuality', key: 'targetQuality',
       render: (q: string) => <Tag color={QUALITY_COLORS[q]}>{QUALITY_NAMES[q]}</Tag>,

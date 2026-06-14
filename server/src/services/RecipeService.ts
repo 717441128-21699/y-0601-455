@@ -61,33 +61,64 @@ export class RecipeService {
       baseSuccess + proficiency * 0.01 + equipmentBonus + creativityBonus
     ));
 
-    paperItem.quantity -= recipeData.paperCost;
-    if (recipeData.dewCost > 0 && dewItem) dewItem.quantity -= recipeData.dewCost;
-    inventory.updatedAt = new Date();
-
     for (const ing of recipeData.ingredients) {
       const mat = await Material.findById(ing.materialId);
       if (!mat) {
         return { success: false, message: `原料 ${ing.materialId} 不存在`, actualSuccessRate };
       }
+      const invMat = inventory.materials.find(m => m.materialId.toString() === ing.materialId);
+      if (!invMat || invMat.quantity < ing.minQuantity) {
+        return { success: false, message: `原料 ${mat.name} 数量不足`, actualSuccessRate };
+      }
     }
+
+    paperItem.quantity -= recipeData.paperCost;
+    if (recipeData.dewCost > 0 && dewItem) dewItem.quantity -= recipeData.dewCost;
+
+    for (const ing of recipeData.ingredients) {
+      const invMat = inventory.materials.find(m => m.materialId.toString() === ing.materialId);
+      if (invMat) {
+        invMat.quantity -= ing.minQuantity;
+      }
+    }
+
+    inventory.materials = inventory.materials.filter(m => m.quantity > 0);
+    inventory.updatedAt = new Date();
 
     const success = Math.random() < actualSuccessRate;
 
     if (!success) {
-      await inventory.save();
       const returned: Array<{ materialId: Types.ObjectId; name: string; quality: MaterialQuality; quantity: number }> = [];
       for (const ing of recipeData.ingredients) {
         const mat = await Material.findById(ing.materialId);
         if (mat) {
-          returned.push({
-            materialId: new Types.ObjectId(ing.materialId),
-            name: mat.name,
-            quality: mat.quality,
-            quantity: Math.ceil(ing.minQuantity * 0.4),
-          });
+          const returnQty = Math.ceil(ing.minQuantity * 0.4);
+          if (returnQty > 0) {
+            returned.push({
+              materialId: new Types.ObjectId(ing.materialId),
+              name: mat.name,
+              quality: mat.quality,
+              quantity: returnQty,
+            });
+            const existingMat = inventory.materials.find(m => m.materialId.toString() === ing.materialId);
+            if (existingMat) {
+              existingMat.quantity += returnQty;
+            } else {
+              inventory.materials.push({
+                materialId: new Types.ObjectId(ing.materialId),
+                name: mat.name,
+                type: mat.type,
+                quality: mat.quality,
+                icon: mat.icon,
+                quantity: returnQty,
+              });
+            }
+          }
         }
       }
+      inventory.updatedAt = new Date();
+      await inventory.save();
+
       return {
         success: false,
         message: '研发失败，部分原料已返还',
@@ -238,6 +269,33 @@ export class RecipeService {
       Recipe.find(query).sort({ submittedAt: -1 }).skip(skip).limit(limit).populate('creatorId', 'nickname avatar'),
       Recipe.countDocuments(query),
     ]);
+
+    if (playerId) {
+      const inventory = await Inventory.findOne({ playerId });
+      const blueprintRecipeIds: string[] = [];
+      if (inventory) {
+        for (const item of inventory.specialItems) {
+          if (item.itemId.startsWith('blueprint_')) {
+            const rid = item.itemId.replace('blueprint_', '');
+            blueprintRecipeIds.push(rid);
+          }
+        }
+      }
+      if (blueprintRecipeIds.length > 0) {
+        const blueprintRecipes = await Recipe.find({
+          _id: { $in: blueprintRecipeIds },
+          status: 'approved',
+          creatorId: { $ne: playerId },
+        }).populate('creatorId', 'nickname avatar');
+        const existingIds = new Set(recipes.map(r => r._id.toString()));
+        for (const br of blueprintRecipes) {
+          if (!existingIds.has(br._id.toString())) {
+            recipes.push(br);
+          }
+        }
+      }
+    }
+
     return { recipes, total, page, limit };
   }
 }

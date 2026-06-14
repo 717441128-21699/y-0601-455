@@ -14,6 +14,7 @@ export interface UserInfo {
   contestScore: number
   guildContribution: number
   guildId?: string
+  exp: number
   skills: { taste: number; technique: number; creativity: number }
 }
 
@@ -76,7 +77,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   fetchUserInfo: async () => {
     try {
-      const data = await request.get('/auth/me')
+      const data = await request.get('/auth/me') as any
       set({
         user: { ...data.player, id: data.player._id },
         workshop: data.workshop,
@@ -87,7 +88,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   login: async (username, password) => {
-    const res = await request.post('/auth/login', { username, password })
+    const res = await request.post('/auth/login', { username, password }) as any
     get().setToken(res.token)
     get().setUser(res.player)
     setTimeout(() => get().fetchUserInfo(), 100)
@@ -95,7 +96,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   register: async (data) => {
-    const res = await request.post('/auth/register', data)
+    const res = await request.post('/auth/register', data) as any
     get().setToken(res.token)
     get().setUser(res.player)
     return res

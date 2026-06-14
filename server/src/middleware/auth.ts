@@ -27,6 +27,6 @@ export const generateToken = (playerId: string) => {
   return jwt.sign(
     { playerId },
     process.env.JWT_SECRET || 'magic-candy-secret-key-2024',
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    { expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as any }
   );
 };

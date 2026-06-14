@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Form, Input, Button, Card, Tabs, message, Typography } from 'antd'
-import { UserOutlined, LockOutlined, MailOutlined, SmileOutlined, CandyOutlined } from '@ant-design/icons'
+import { UserOutlined, LockOutlined, MailOutlined, SmileOutlined } from '@ant-design/icons'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAppStore } from '../store/useAppStore'
 

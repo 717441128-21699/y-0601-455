@@ -3,6 +3,7 @@ import { Trade, ITrade } from '../models/Trade';
 import { Candy } from '../models/Candy';
 import { Recipe } from '../models/Recipe';
 import { Player } from '../models/Player';
+import { Inventory } from '../models/Inventory';
 import { GlobalState } from '../models/GlobalState';
 import { MaterialQuality } from '../config/constants';
 
@@ -152,6 +153,47 @@ export class TradeService {
         candy.creatorId = new Types.ObjectId(buyerId);
         candy.inTrade = false;
         await candy.save();
+      }
+    }
+
+    if (trade.itemType === 'recipe' && trade.recipeId) {
+      const originalRecipe = await Recipe.findById(trade.recipeId);
+      if (originalRecipe) {
+        const copiedRecipe = new Recipe({
+          creatorId: new Types.ObjectId(buyerId),
+          name: originalRecipe.name,
+          description: originalRecipe.description,
+          ingredients: originalRecipe.ingredients,
+          baseSweetness: originalRecipe.baseSweetness,
+          baseMagicDuration: originalRecipe.baseMagicDuration,
+          targetQuality: originalRecipe.targetQuality,
+          possibleEffects: originalRecipe.possibleEffects,
+          difficulty: originalRecipe.difficulty,
+          successRate: originalRecipe.successRate,
+          paperCost: originalRecipe.paperCost,
+          dewCost: originalRecipe.dewCost,
+          isOfficial: false,
+          status: 'approved',
+          submittedAt: new Date(),
+          limitedEdition: originalRecipe.limitedEdition,
+        });
+        await copiedRecipe.save();
+
+        const buyerInventory = await Inventory.findOne({ playerId: buyerId });
+        if (buyerInventory) {
+          const existingBlueprint = buyerInventory.specialItems.find(i => i.itemId === `blueprint_${copiedRecipe._id}`);
+          if (!existingBlueprint) {
+            buyerInventory.specialItems.push({
+              itemId: `blueprint_${copiedRecipe._id}`,
+              name: `图纸: ${originalRecipe.name}`,
+              description: `甜点大赛限定图纸 - ${originalRecipe.description || originalRecipe.name}`,
+              icon: '📜',
+              type: 'blueprint',
+              quantity: 1,
+            });
+            await buyerInventory.save();
+          }
+        }
       }
     }
 

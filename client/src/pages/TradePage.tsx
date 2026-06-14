@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import {
   Row, Col, Card, Tabs, List, Avatar, Tag, Button, Modal, Form, InputNumber, Select,
-  Table, Statistic, Empty, Typography, Space, Popconfirm, message, Input
+  Table, Statistic, Empty, Typography, Space, Popconfirm, message, Input, Alert
 } from 'antd'
 import {
   ShoppingCartOutlined, ShoppingOutlined, ShopOutlined, RiseOutlined,
@@ -113,6 +113,7 @@ const TradePage = () => {
             <div>
               <p>{res.message}</p>
               {res.festivalTriggered && <p style={{ color: '#FFD700', fontWeight: 'bold' }}>🎊 您触发了糖果节！全服暴击率提升！</p>}
+              {buyModal.itemType === 'recipe' && <p style={{ color: '#722ed1' }}>📜 配方图纸已存入您的背包，可在配方页面查看和使用！</p>}
             </div>
           ),
         })
@@ -234,22 +235,22 @@ const TradePage = () => {
                   <Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
                     <Col>
                       <Select placeholder="物品类型" allowClear value={itemFilter} onChange={setItemFilter} style={{ width: 140 }}>
-                        <Option value="candy">🍬 糖果</Option>
-                        <Option value="recipe">📜 配方</Option>
+                        <Select.Option value="candy">🍬 糖果</Select.Option>
+                        <Select.Option value="recipe">📜 配方</Select.Option>
                       </Select>
                     </Col>
                     {itemFilter === 'candy' && (
                       <Col>
                         <Select placeholder="品质筛选" allowClear value={qualityFilter} onChange={setQualityFilter} style={{ width: 140 }}>
-                          {Object.entries(QUALITY_NAMES).map(([v, l]) => <Option key={v} value={v}>{l}</Option>)}
+                          {Object.entries(QUALITY_NAMES).map(([v, l]) => <Select.Option key={v} value={v}>{l}</Select.Option>)}
                         </Select>
                       </Col>
                     )}
                     <Col>
                       <Select value={sortBy} onChange={setSortBy} style={{ width: 140 }}>
-                        <Option value="newest">最新上架</Option>
-                        <Option value="price">价格从低</Option>
-                        <Option value="rarity">价格从高</Option>
+                        <Select.Option value="newest">最新上架</Select.Option>
+                        <Select.Option value="price">价格从低</Select.Option>
+                        <Select.Option value="rarity">价格从高</Select.Option>
                       </Select>
                     </Col>
                   </Row>
@@ -312,10 +313,10 @@ const TradePage = () => {
                               ) : <Empty description="没有可上架的糖果" />}
                             </Card>
                             <Card title="📜 我的配方（可上架）" className="candy-card" size="small">
-                              {myRecipes.filter((r: any) => r.status === 'approved' && (r.creatorId?._id === user?.id || r.creatorId === user?.id)).length ? (
+                              {myRecipes.filter((r: any) => r.status === 'approved').length ? (
                                 <Row gutter={[8, 8]}>
                                   {myRecipes
-                                    .filter((r: any) => r.status === 'approved' && (r.creatorId?._id === user?.id || r.creatorId === user?.id))
+                                    .filter((r: any) => r.status === 'approved')
                                     .map((r: any) => (
                                       <Col xs={24} sm={12} md={8} lg={6} key={r._id}>
                                         <Card size="small" hoverable
@@ -326,6 +327,9 @@ const TradePage = () => {
                                           <Tag color={QUALITY_COLORS[r.targetQuality]} style={{ fontSize: 10, padding: '0 4px', margin: 0 }}>
                                             {QUALITY_NAMES[r.targetQuality]} · 难度 {r.difficulty}
                                           </Tag>
+                                          {(r.creatorId?._id || r.creatorId) !== user?.id && (
+                                            <Tag color="purple" style={{ fontSize: 10, padding: '0 4px', margin: 0, marginLeft: 4 }}>图纸</Tag>
+                                          )}
                                         </Card>
                                       </Col>
                                     ))}
