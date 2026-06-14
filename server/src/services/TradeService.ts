@@ -96,10 +96,10 @@ export class TradeService {
 
       const blueprintKey = `blueprint_${itemId}`;
       const blueprint = inventory.specialItems.find(i => i.itemId === blueprintKey);
-      if (!blueprint || blueprint.quantity < 1) {
-        return { success: false, message: '您没有可出售的该图纸' };
+      if (!blueprint || blueprint.quantity < quantity) {
+        return { success: false, message: `图纸数量不足，当前持有 ${blueprint?.quantity || 0} 张` };
       }
-      blueprint.quantity -= 1;
+      blueprint.quantity -= quantity;
       inventory.specialItems = inventory.specialItems.filter(i => i.quantity > 0);
       inventory.updatedAt = new Date();
       await inventory.save();
@@ -146,18 +146,19 @@ export class TradeService {
     if (trade.sellerId.toString() === buyerId) return { success: false, message: '不能购买自己的商品' };
     if (trade.expiredAt < new Date()) return { success: false, message: '交易已过期' };
 
-    const fee = Math.round(trade.askingPrice * trade.transactionFee);
-    const totalCost = trade.askingPrice + fee;
+    const qty = trade.quantity || 1;
+    const fee = Math.round(trade.askingPrice * trade.transactionFee * qty);
+    const totalCost = trade.askingPrice * qty + fee;
     if (buyer.gold < totalCost) return { success: false, message: '金币不足' };
 
     const seller = await Player.findById(trade.sellerId);
     if (!seller) return { success: false, message: '卖家不存在' };
 
     buyer.gold -= totalCost;
-    seller.gold += trade.askingPrice;
+    seller.gold += trade.askingPrice * qty;
 
     const itemName = trade.itemType === 'candy' ? '糖果' : '配方';
-    const festivalTriggered = trade.askingPrice >= 10000 && Math.random() < 0.15;
+    const festivalTriggered = (trade.askingPrice * qty) >= 10000 && Math.random() < 0.15;
 
     if (trade.itemType === 'candy' && trade.candyId) {
       const candy = await Candy.findById(trade.candyId);
@@ -176,7 +177,7 @@ export class TradeService {
           const blueprintKey = `blueprint_${trade.recipeId}`;
           const existingBlueprint = buyerInventory.specialItems.find(i => i.itemId === blueprintKey);
           if (existingBlueprint) {
-            existingBlueprint.quantity += 1;
+            existingBlueprint.quantity += qty;
           } else {
             buyerInventory.specialItems.push({
               itemId: blueprintKey,
@@ -184,7 +185,7 @@ export class TradeService {
               description: originalRecipe.description || `配方图纸 - ${originalRecipe.name}`,
               icon: '📜',
               type: 'blueprint',
-              quantity: 1,
+              quantity: qty,
             });
           }
           buyerInventory.updatedAt = new Date();
@@ -221,7 +222,7 @@ export class TradeService {
 
     return {
       success: true,
-      message: `购买${itemName}成功！${festivalTriggered ? '🎉 触发糖果节！全服熬糖暴击率提升！' : ''}`,
+      message: `购买${itemName}成功！共 ${qty} 张${festivalTriggered ? '🎉 触发糖果节！全服熬糖暴击率提升！' : ''}`,
       trade,
       festivalTriggered,
     };
@@ -251,10 +252,11 @@ export class TradeService {
       const inventory = await Inventory.findOne({ playerId: sellerId });
       if (inventory) {
         const recipe = await Recipe.findById(trade.recipeId);
+        const returnQty = trade.quantity || 1;
         const blueprintKey = `blueprint_${trade.recipeId}`;
         const existingBlueprint = inventory.specialItems.find(i => i.itemId === blueprintKey);
         if (existingBlueprint) {
-          existingBlueprint.quantity += 1;
+          existingBlueprint.quantity += returnQty;
         } else {
           inventory.specialItems.push({
             itemId: blueprintKey,
@@ -262,7 +264,7 @@ export class TradeService {
             description: recipe?.description || '配方图纸',
             icon: '📜',
             type: 'blueprint',
-            quantity: 1,
+            quantity: returnQty,
           });
         }
         inventory.updatedAt = new Date();

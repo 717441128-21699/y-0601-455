@@ -30,7 +30,7 @@ router.post('/list', authMiddleware, async (req: AuthRequest, res: Response) => 
 router.post('/:id/buy', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     const result = await TradeService.buyItem(req.playerId!, req.params.id);
-    if (result.success && result.trade && result.festivalTriggered) {
+    if (result.success && result.trade) {
       const io = getSocketServer.get();
       const buyer = await Player.findById(req.playerId).select('nickname');
       if (io && buyer) {
@@ -39,14 +39,17 @@ router.post('/:id/buy', authMiddleware, async (req: AuthRequest, res: Response) 
           itemType: result.trade.itemType,
           buyer: buyer.nickname,
           price: result.trade.askingPrice,
-          festivalTriggered: true,
+          quantity: result.trade.quantity,
+          festivalTriggered: result.festivalTriggered,
           timestamp: new Date(),
         });
-        io.emit('candy_festival_started', {
-          triggeredBy: buyer.nickname,
-          critBonus: parseFloat(process.env.CANDY_FESTIVAL_CRIT_BONUS || '0.3'),
-          endsAt: new Date().setHours(23, 59, 59, 999),
-        });
+        if (result.festivalTriggered) {
+          io.emit('candy_festival_started', {
+            triggeredBy: buyer.nickname,
+            critBonus: parseFloat(process.env.CANDY_FESTIVAL_CRIT_BONUS || '0.3'),
+            endsAt: new Date().setHours(23, 59, 59, 999),
+          });
+        }
       }
     }
     res.json(result);

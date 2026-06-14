@@ -120,13 +120,22 @@ const TradePage = () => {
     try {
       const res: any = await request.post(`/trade/${buyModal._id}/buy`)
       if (res.success) {
+        const trade = res.trade
+        const qty = trade?.quantity || 1
+        const unitPrice = buyModal.askingPrice
+        const totalPaid = unitPrice * qty + Math.round(unitPrice * 0.05 * qty)
         Modal.success({
           title: '🎉 购买成功！',
           content: (
             <div>
               <p>{res.message}</p>
+              <div style={{ marginTop: 8, fontSize: 13 }}>
+                <div>单价：{unitPrice.toLocaleString()} 💰 × {qty} 张</div>
+                <div>手续费：{Math.round(unitPrice * 0.05 * qty).toLocaleString()} 💰</div>
+                <div style={{ fontWeight: 'bold' }}>实付：{totalPaid.toLocaleString()} 💰</div>
+              </div>
               {res.festivalTriggered && <p style={{ color: '#FFD700', fontWeight: 'bold' }}>🎊 您触发了糖果节！全服暴击率提升！</p>}
-              {buyModal.itemType === 'recipe' && <p style={{ color: '#722ed1' }}>📜 配方图纸已存入您的背包，可在配方页面查看和使用！</p>}
+              {buyModal.itemType === 'recipe' && <p style={{ color: '#722ed1' }}>📜 配方图纸 x{qty} 已存入背包，可继续挂售或用于熬糖！</p>}
             </div>
           ),
         })
@@ -141,6 +150,7 @@ const TradePage = () => {
     const res: any = await request.post(`/trade/${tradeId}/cancel`)
     if (res.success) {
       message.success(res.message)
+      fetchUserInfo()
       loadTabData()
     }
   }
@@ -202,9 +212,11 @@ const TradePage = () => {
           <Col>
             <div style={{ fontSize: 18, fontWeight: 'bold', color: '#FF8C00' }}>
               💰 {(t.askingPrice || 0).toLocaleString()}
-              <Text type="secondary" style={{ fontSize: 11, marginLeft: 4 }}>
-                {t.quantity > 1 ? ` x${t.quantity}` : ''}
-              </Text>
+              {t.quantity > 1 && (
+                <Text type="secondary" style={{ fontSize: 11, marginLeft: 4 }}>
+                  /张 · 共 {(t.askingPrice * t.quantity).toLocaleString()}
+                </Text>
+              )}
             </div>
           </Col>
           {showActions ? null : t.status === 'listed' && t.sellerId?._id !== user?.id && t.sellerId !== user?.id ? (
@@ -502,7 +514,7 @@ const TradePage = () => {
                       <Row style={{ marginTop: 4 }}>
                         <Col span={24}><Text type="secondary">实际到账：</Text><b style={{ color: '#52c41a' }}>{(price * qty - fee).toLocaleString()} 💰</b></Col>
                       </Row>
-                      {price >= 10000 && (
+                      {price * qty >= 10000 && (
                         <Tag color="gold" style={{ marginTop: 8 }}>🎉 大额成交有概率触发全服糖果节！</Tag>
                       )}
                     </Card>
@@ -534,47 +546,49 @@ const TradePage = () => {
           </Popconfirm>,
         ]}
       >
-        {buyModal && (
-          <div>
-            <Card size="small" style={{ marginBottom: 12 }}>
-              <Card.Meta
-                avatar={<Avatar size={56} style={{
-                  background: buyModal.itemType === 'candy' ? (buyModal.candyId as any)?.color || '#FFB6C1' : 'linear-gradient(135deg, #f093fb, #4facfe)',
-                  fontSize: 28,
-                }}>
-                  {buyModal.itemType === 'candy' ? (buyModal.candyId as any)?.icon || '🍬' : '📜'}
-                </Avatar>}
-                title={(buyModal.candyId || buyModal.recipeId as any)?.name || '商品'}
-                description={`卖家：${buyModal.sellerId?.nickname || '未知'}`}
-              />
-            </Card>
-            <Row gutter={12}>
-              <Col span={12}><Card size="small"><Statistic title="售价" value={buyModal.askingPrice?.toLocaleString()} suffix="💰" /></Card></Col>
-              <Col span={12}><Card size="small"><Statistic title="手续费 5%" value={Math.round((buyModal.askingPrice || 0) * 0.05)?.toLocaleString()} suffix="💰" /></Card></Col>
-            </Row>
-            <Card size="small" style={{ marginTop: 12 }}>
-              <Statistic
-                title="合计支付"
-                value={(buyModal.askingPrice + Math.round((buyModal.askingPrice || 0) * 0.05)).toLocaleString()}
-                suffix="💰"
-                valueStyle={{ color: (user?.gold || 0) >= (buyModal.askingPrice + Math.round((buyModal.askingPrice || 0) * 0.05)) ? '#52c41a' : '#ff4d4f' }}
-              />
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                当前金币：{user?.gold?.toLocaleString()} 💰
-                {(user?.gold || 0) < (buyModal.askingPrice + Math.round((buyModal.askingPrice || 0) * 0.05)) && <Text type="danger">（余额不足）</Text>}
-              </Text>
-            </Card>
-            {buyModal.askingPrice >= 10000 && (
-              <Alert
-                type="success"
-                showIcon
-                style={{ marginTop: 12 }}
-                message="🎉 此为大额交易，有 15% 概率触发今日全服糖果节！"
-                description="全服熬糖暴击率 +30%，持续到今日 24:00"
-              />
-            )}
-          </div>
-        )}
+        {buyModal && (() => {
+          const qty = buyModal.quantity || 1
+          const unitPrice = buyModal.askingPrice || 0
+          const fee = Math.round(unitPrice * 0.05 * qty)
+          const totalPay = unitPrice * qty + fee
+          const canAfford = (user?.gold || 0) >= totalPay
+          return (
+            <div>
+              <Card size="small" style={{ marginBottom: 12 }}>
+                <Card.Meta
+                  avatar={<Avatar size={56} style={{
+                    background: buyModal.itemType === 'candy' ? (buyModal.candyId as any)?.color || '#FFB6C1' : 'linear-gradient(135deg, #f093fb, #4facfe)',
+                    fontSize: 28,
+                  }}>
+                    {buyModal.itemType === 'candy' ? (buyModal.candyId as any)?.icon || '🍬' : '📜'}
+                  </Avatar>}
+                  title={(buyModal.candyId || buyModal.recipeId as any)?.name || '商品'}
+                  description={`卖家：${buyModal.sellerId?.nickname || '未知'} · 数量：${qty} 张`}
+                />
+              </Card>
+              <Row gutter={12}>
+                <Col span={8}><Card size="small"><Statistic title="单价" value={unitPrice.toLocaleString()} suffix="💰" /></Card></Col>
+                <Col span={8}><Card size="small"><Statistic title={`手续费 (${qty}张)`} value={fee.toLocaleString()} suffix="💰" /></Card></Col>
+                <Col span={8}><Card size="small"><Statistic title="合计" value={totalPay.toLocaleString()} suffix="💰" valueStyle={{ color: canAfford ? '#52c41a' : '#ff4d4f' }} /></Card></Col>
+              </Row>
+              <Card size="small" style={{ marginTop: 12 }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  当前金币：{user?.gold?.toLocaleString()} 💰
+                  {!canAfford && <Text type="danger">（余额不足）</Text>}
+                </Text>
+              </Card>
+              {(unitPrice * qty) >= 10000 && (
+                <Alert
+                  type="success"
+                  showIcon
+                  style={{ marginTop: 12 }}
+                  message="🎉 此为大额交易，有 15% 概率触发今日全服糖果节！"
+                  description="全服熬糖暴击率 +30%，持续到今日 24:00"
+                />
+              )}
+            </div>
+          )
+        })()}
       </Modal>
     </div>
   )
