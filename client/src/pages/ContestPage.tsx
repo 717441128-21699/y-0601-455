@@ -9,7 +9,7 @@ import {
 } from '@ant-design/icons'
 import { useAppStore } from '../store/useAppStore'
 import request from '../utils/request'
-import { getSocket } from '../utils/socket'
+import { initSocket, getSocket } from '../utils/socket'
 import { QUALITY_NAMES, QUALITY_COLORS, EFFECT_NAMES, AFFIX_NAMES } from '../utils/constants'
 import dayjs from 'dayjs'
 
@@ -28,6 +28,7 @@ const ContestPage = () => {
   const socketJoinedRef = useRef<string | null>(null)
 
   useEffect(() => {
+    initSocket()
     loadContest()
     const socket = getSocket()
     if (socket) {
@@ -59,6 +60,7 @@ const ContestPage = () => {
     contestRef.current = activeContest
     if (activeContest?._id) {
       loadFullContest()
+      initSocket()
       const socket = getSocket()
       if (socket && socketJoinedRef.current !== activeContest._id) {
         if (socketJoinedRef.current) {

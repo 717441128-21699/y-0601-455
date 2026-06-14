@@ -90,7 +90,19 @@ export class TradeService {
     } else {
       const recipe = await Recipe.findById(itemId);
       if (!recipe) return { success: false, message: '配方不存在' };
-      if (recipe.creatorId.toString() !== sellerId) return { success: false, message: '不是您的配方' };
+
+      const inventory = await Inventory.findOne({ playerId: sellerId });
+      if (!inventory) return { success: false, message: '背包不存在' };
+
+      const blueprintKey = `blueprint_${itemId}`;
+      const blueprint = inventory.specialItems.find(i => i.itemId === blueprintKey);
+      if (!blueprint || blueprint.quantity < 1) {
+        return { success: false, message: '您没有可出售的该图纸' };
+      }
+      blueprint.quantity -= 1;
+      inventory.specialItems = inventory.specialItems.filter(i => i.quantity > 0);
+      inventory.updatedAt = new Date();
+      await inventory.save();
     }
 
     const expiredAt = new Date();
@@ -159,40 +171,24 @@ export class TradeService {
     if (trade.itemType === 'recipe' && trade.recipeId) {
       const originalRecipe = await Recipe.findById(trade.recipeId);
       if (originalRecipe) {
-        const copiedRecipe = new Recipe({
-          creatorId: new Types.ObjectId(buyerId),
-          name: originalRecipe.name,
-          description: originalRecipe.description,
-          ingredients: originalRecipe.ingredients,
-          baseSweetness: originalRecipe.baseSweetness,
-          baseMagicDuration: originalRecipe.baseMagicDuration,
-          targetQuality: originalRecipe.targetQuality,
-          possibleEffects: originalRecipe.possibleEffects,
-          difficulty: originalRecipe.difficulty,
-          successRate: originalRecipe.successRate,
-          paperCost: originalRecipe.paperCost,
-          dewCost: originalRecipe.dewCost,
-          isOfficial: false,
-          status: 'approved',
-          submittedAt: new Date(),
-          limitedEdition: originalRecipe.limitedEdition,
-        });
-        await copiedRecipe.save();
-
         const buyerInventory = await Inventory.findOne({ playerId: buyerId });
         if (buyerInventory) {
-          const existingBlueprint = buyerInventory.specialItems.find(i => i.itemId === `blueprint_${copiedRecipe._id}`);
-          if (!existingBlueprint) {
+          const blueprintKey = `blueprint_${trade.recipeId}`;
+          const existingBlueprint = buyerInventory.specialItems.find(i => i.itemId === blueprintKey);
+          if (existingBlueprint) {
+            existingBlueprint.quantity += 1;
+          } else {
             buyerInventory.specialItems.push({
-              itemId: `blueprint_${copiedRecipe._id}`,
+              itemId: blueprintKey,
               name: `图纸: ${originalRecipe.name}`,
-              description: `甜点大赛限定图纸 - ${originalRecipe.description || originalRecipe.name}`,
+              description: originalRecipe.description || `配方图纸 - ${originalRecipe.name}`,
               icon: '📜',
               type: 'blueprint',
               quantity: 1,
             });
-            await buyerInventory.save();
           }
+          buyerInventory.updatedAt = new Date();
+          await buyerInventory.save();
         }
       }
     }
@@ -250,6 +246,30 @@ export class TradeService {
         await candy.save();
       }
     }
+
+    if (trade.itemType === 'recipe' && trade.recipeId) {
+      const inventory = await Inventory.findOne({ playerId: sellerId });
+      if (inventory) {
+        const recipe = await Recipe.findById(trade.recipeId);
+        const blueprintKey = `blueprint_${trade.recipeId}`;
+        const existingBlueprint = inventory.specialItems.find(i => i.itemId === blueprintKey);
+        if (existingBlueprint) {
+          existingBlueprint.quantity += 1;
+        } else {
+          inventory.specialItems.push({
+            itemId: blueprintKey,
+            name: `图纸: ${recipe?.name || '未知配方'}`,
+            description: recipe?.description || '配方图纸',
+            icon: '📜',
+            type: 'blueprint',
+            quantity: 1,
+          });
+        }
+        inventory.updatedAt = new Date();
+        await inventory.save();
+      }
+    }
+
     return { success: true, message: '已取消上架' };
   }
 

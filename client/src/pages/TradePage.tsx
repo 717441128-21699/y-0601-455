@@ -30,6 +30,7 @@ const TradePage = () => {
   const [sortBy, setSortBy] = useState<string>('newest')
   const [myCandies, setMyCandies] = useState<any[]>([])
   const [myRecipes, setMyRecipes] = useState<any[]>([])
+  const [inventory, setInventory] = useState<any>(null)
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
 
@@ -56,18 +57,26 @@ const TradePage = () => {
         setTotal(res.total || 0)
       }
       if (tab === 'sell') {
-        const [s, p, c, r] = await Promise.all([
+        const [s, p, c, r, inv] = await Promise.all([
           request.get('/trade/my/seller?limit=20').catch(() => ({ trades: [] })),
           request.get('/trade/my/buyer?limit=20').catch(() => ({ trades: [] })),
           request.get('/candy/candies/my?limit=100').catch(() => ({ candies: [] })),
           request.get('/candy/recipes/approved?limit=50').catch(() => ({ recipes: [] })),
+          request.get('/candy/materials').catch(() => ({ specialItems: [] })),
         ])
         setMySales((s as any).trades || [])
         setMyPurchases((p as any).trades || [])
         setMyCandies(((c as any).candies || []).filter((x: any) => !x.inTrade))
         setMyRecipes((r as any).recipes || [])
+        setInventory(inv as any)
       }
     } catch (e) {}
+  }
+
+  const getBlueprintQty = (recipeId: string) => {
+    if (!inventory?.specialItems) return 0
+    const item = inventory.specialItems.find((i: any) => i.itemId === `blueprint_${recipeId}`)
+    return item?.quantity || 0
   }
 
   const openListModal = (item: any, itemType: string) => {
@@ -75,6 +84,10 @@ const TradePage = () => {
     form.resetFields()
     setPriceSuggest(null)
     loadPriceSuggest(item._id, itemType)
+    if (itemType === 'recipe') {
+      const qty = getBlueprintQty(item._id)
+      form.setFieldsValue({ quantity: 1, maxQty: qty })
+    }
   }
 
   const loadPriceSuggest = async (itemId: string, itemType: string) => {
@@ -317,22 +330,30 @@ const TradePage = () => {
                                 <Row gutter={[8, 8]}>
                                   {myRecipes
                                     .filter((r: any) => r.status === 'approved')
-                                    .map((r: any) => (
-                                      <Col xs={24} sm={12} md={8} lg={6} key={r._id}>
-                                        <Card size="small" hoverable
-                                          extra={<Button size="small" type="primary" onClick={() => openListModal(r, 'recipe')}>上架</Button>}
-                                          style={{ borderLeft: '3px solid #722ed1' }}
-                                        >
-                                          <div style={{ fontSize: 12, fontWeight: 600 }}>{r.name}</div>
-                                          <Tag color={QUALITY_COLORS[r.targetQuality]} style={{ fontSize: 10, padding: '0 4px', margin: 0 }}>
-                                            {QUALITY_NAMES[r.targetQuality]} · 难度 {r.difficulty}
-                                          </Tag>
-                                          {(r.creatorId?._id || r.creatorId) !== user?.id && (
-                                            <Tag color="purple" style={{ fontSize: 10, padding: '0 4px', margin: 0, marginLeft: 4 }}>图纸</Tag>
-                                          )}
-                                        </Card>
-                                      </Col>
-                                    ))}
+                                    .map((r: any) => {
+                                      const bpQty = getBlueprintQty(r._id)
+                                      return (
+                                        <Col xs={24} sm={12} md={8} lg={6} key={r._id}>
+                                          <Card size="small" hoverable
+                                            extra={<Button size="small" type="primary" disabled={bpQty < 1} onClick={() => openListModal(r, 'recipe')}>上架</Button>}
+                                            style={{ borderLeft: '3px solid #722ed1' }}
+                                          >
+                                            <div style={{ fontSize: 12, fontWeight: 600 }}>{r.name}</div>
+                                            <div>
+                                              <Tag color={QUALITY_COLORS[r.targetQuality]} style={{ fontSize: 10, padding: '0 4px', margin: 0 }}>
+                                                {QUALITY_NAMES[r.targetQuality]} · 难度 {r.difficulty}
+                                              </Tag>
+                                              {(r.creatorId?._id || r.creatorId) !== user?.id && (
+                                                <Tag color="purple" style={{ fontSize: 10, padding: '0 4px', margin: 0, marginLeft: 4 }}>图纸</Tag>
+                                              )}
+                                            </div>
+                                            <div style={{ marginTop: 4 }}>
+                                              <Tag color="blue" style={{ fontSize: 10 }}>持有: {bpQty} 张</Tag>
+                                            </div>
+                                          </Card>
+                                        </Col>
+                                      )
+                                    })}
                                 </Row>
                               ) : <Empty description="没有可上架的配方" />}
                             </Card>
@@ -451,7 +472,14 @@ const TradePage = () => {
               <Row gutter={12}>
                 <Col span={12}>
                   <Form.Item name="quantity" label="出售数量" rules={[{ required: true }]} initialValue={1}>
-                    <InputNumber min={1} max={(listModal.item as any).quantity || 999} size="large" style={{ width: '100%' }} />
+                    <InputNumber
+                      min={1}
+                      max={listModal.itemType === 'recipe'
+                        ? (getBlueprintQty(listModal.item?._id) || 1)
+                        : (listModal.item?.quantity || 999)}
+                      size="large"
+                      style={{ width: '100%' }}
+                    />
                   </Form.Item>
                 </Col>
                 <Col span={12}>

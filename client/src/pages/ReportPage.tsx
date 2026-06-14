@@ -26,7 +26,20 @@ const ReportPage = () => {
     try {
       const res: any = await request.get('/report/latest')
       if (res) {
-        setReport(res)
+        const reportEnd = dayjs(res.weekEnd)
+        const now = dayjs()
+        const daysDiff = now.diff(reportEnd, 'day')
+        if (daysDiff > 7) {
+          const genRes: any = await request.post('/report/generate')
+          if (genRes?.success) {
+            setReport(genRes.report)
+            message.success('已生成最新7天报告')
+          } else {
+            setReport(res)
+          }
+        } else {
+          setReport(res)
+        }
       } else {
         const genRes: any = await request.post('/report/generate')
         if (genRes?.success) {

@@ -6,6 +6,7 @@ import { PlayerHistory } from '../models/PlayerHistory';
 import { GlobalState } from '../models/GlobalState';
 import { Recipe } from '../models/Recipe';
 import { Inventory } from '../models/Inventory';
+import { Material } from '../models/Material';
 
 export interface SkillBoostResult {
   success: boolean;
@@ -291,14 +292,37 @@ export class ContestService {
                             (reloaded.rewards.ranks as any)['11-30'];
 
         if (rewardEntry?.recipeBlueprint) {
+          const matNames = ['稀有月光蔷薇', '稀有晨露蜂蜜', '稀有星砂晶'];
+          const materials = await Promise.all(
+            matNames.map(name => Material.findOne({ name }))
+          );
+
           const blueprintRecipe = new Recipe({
             creatorId: p.playerId,
             name: rewardEntry.recipeBlueprint,
             description: `${reloaded.theme}大赛冠军限定配方`,
             ingredients: [
-              { materialId: new Types.ObjectId(), materialName: '星霜蜜糖', minQuantity: 3, maxQuantity: 5, order: 0 },
-              { materialId: new Types.ObjectId(), materialName: '月华花果', minQuantity: 2, maxQuantity: 4, order: 1 },
-              { materialId: new Types.ObjectId(), materialName: '魔力结晶', minQuantity: 1, maxQuantity: 3, order: 2 },
+              {
+                materialId: materials[0]?._id || new Types.ObjectId(),
+                materialName: '稀有月光蔷薇',
+                minQuantity: 3,
+                maxQuantity: 5,
+                order: 0,
+              },
+              {
+                materialId: materials[1]?._id || new Types.ObjectId(),
+                materialName: '稀有晨露蜂蜜',
+                minQuantity: 2,
+                maxQuantity: 4,
+                order: 1,
+              },
+              {
+                materialId: materials[2]?._id || new Types.ObjectId(),
+                materialName: '稀有星砂晶',
+                minQuantity: 1,
+                maxQuantity: 3,
+                order: 2,
+              },
             ],
             baseSweetness: 120,
             baseMagicDuration: 90,
