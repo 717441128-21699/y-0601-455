@@ -1,0 +1,24 @@
+{
+  "name": "magic-candy-workshop",
+  "version": "1.0.0",
+  "description": "多人在线魔法世界的魔法糖果工坊与甜点大赛系统",
+  "private": true,
+  "workspaces": [
+    "server",
+    "client"
+  ],
+  "scripts": {
+    "install:all": "npm install --workspaces",
+    "dev:server": "npm run dev --workspace=server",
+    "dev:client": "npm run dev --workspace=client",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "build:server": "npm run build --workspace=server",
+    "build:client": "npm run build --workspace=client",
+    "build": "npm run build:server && npm run build:client",
+    "start:server": "npm run start --workspace=server",
+    "start": "npm run start:server"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

@@ -1,0 +1,120 @@
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: linear-gradient(135deg, #fff5fb 0%, #ffe8f1 50%, #fff0f6 100%);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #FFB6C1, #FF69B4);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: #fff5fb;
+}
+
+.page-container {
+  padding: 24px;
+  min-height: calc(100vh - 64px);
+}
+
+.candy-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 12px !important;
+  overflow: hidden;
+}
+
+.candy-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(255, 105, 180, 0.2);
+}
+
+.candy-gradient-text {
+  background: linear-gradient(135deg, #FF69B4, #FF1493, #C71585);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.sparkle-bg {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(255, 240, 246, 0.6));
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 105, 180, 0.2);
+}
+
+.quality-common { color: #8c8c8c; }
+.quality-uncommon { color: #52c41a; }
+.quality-rare { color: #1890ff; }
+.quality-epic { color: #722ed1; }
+.quality-legendary { color: #fa8c16; background: linear-gradient(90deg, #fa8c16, #f5222d); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+.affix-tag {
+  margin: 2px;
+  background: linear-gradient(135deg, #f093fb, #f5576c);
+  border: none;
+  color: white;
+}
+
+.effect-tag {
+  margin: 2px;
+  background: linear-gradient(135deg, #4facfe, #00f2fe);
+  border: none;
+  color: white;
+}
+
+.crit-badge {
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  color: #8B008B;
+  font-weight: bold;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.contest-live {
+  animation: contestPulse 1.5s infinite;
+}
+
+@keyframes contestPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 77, 79, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(255, 77, 79, 0); }
+}
+
+.festival-banner {
+  background: linear-gradient(90deg, #FF69B4, #FFD700, #FF69B4);
+  background-size: 200% 100%;
+  animation: festivalGradient 3s ease infinite;
+  color: white;
+  font-weight: bold;
+  padding: 8px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+@keyframes festivalGradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.glow-text {
+  text-shadow: 0 0 10px rgba(255, 105, 180, 0.6), 0 0 20px rgba(255, 105, 180, 0.4);
+}
